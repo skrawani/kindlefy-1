@@ -1,0 +1,22 @@
+name: Daily Feed
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 5:30 AM IST
+
+jobs:
+  kindlefy:
+    runs-on: ubuntu-latest
+    name: Sync kindle contents.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Kindlefy
+        uses: ./
+        with:
+          kindle_email: "${{ secrets.KINDLE_MAIL }}"
+          sender: '[{ "type": "outlook", "email": "${{ secrets.SENDER_MAIL }}", "password": "${{ secrets.SENDER_PASSWORD }}" }]'
+          sources: '[{ "type": "rss", "url": "https://dev.to/feed" }, { "type": "recipe", "name": "The Hindu" }]'
+          storage: '[{ "type": "local", "githubAccessToken": "${{ secrets.GITHUB_TOKEN }}" }]'
+          no_duplicated_sync: false
