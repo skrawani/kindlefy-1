@@ -10,5 +10,5 @@ ENV XDG_RUNTIME_DIR '/tmp/runtime-root'
 RUN apt-get install -y git-all
 
 # Run Kindlefy
-COPY entrypoint.sh /entrypoint.sh
+COPY . .
 ENTRYPOINT ["sh", "/entrypoint.sh"]
