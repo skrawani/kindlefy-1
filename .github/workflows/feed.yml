@@ -3,7 +3,8 @@ name: Daily Feed
 on:
   schedule:
     - cron: '0 0 * * *' # 5:30 AM IST
-
+  workflow_dispatch: null
+    
 jobs:
   kindlefy:
     runs-on: ubuntu-latest
