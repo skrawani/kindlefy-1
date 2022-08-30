@@ -18,6 +18,6 @@ jobs:
         with:
           kindle_email: "${{ secrets.KINDLE_MAIL }}"
           sender: '[{ "type": "outlook", "email": "${{ secrets.SENDER_MAIL }}", "password": "${{ secrets.SENDER_PASSWORD }}" }]'
-          sources: '[{ "type": "recipe", "url": "HN With Comments Link" }, { "type": "rss", "url": "https://dev.to/feed" }, { "type": "recipe", "name": "The Hindu" }]'
+          sources: '[{ "type": "recipe", "name": "HN With Comments Link" }, { "type": "rss", "url": "https://dev.to/feed" }, { "type": "recipe", "name": "The Hindu" }]'
           storage: '[{ "type": "local", "githubAccessToken": "${{ secrets.GITHUB_TOKEN }}" }]'
           no_duplicated_sync: false
