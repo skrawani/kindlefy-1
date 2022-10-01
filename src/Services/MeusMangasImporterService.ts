@@ -198,9 +198,9 @@ class MeusMangasImporterService implements MangaImporterContract {
 			`image/${mangaSlug}/${chapterNo}/${currentChapterPictureOrder}.png`
 		]
 
-		const isSmallChapterNo = String(currentChapterPictureOrder).length === 1
+		const isSmallChapterPictureNo = String(currentChapterPictureOrder).length === 1
 
-		if (isSmallChapterNo) {
+		if (isSmallChapterPictureNo) {
 			possibleChapterPicturePaths.push(
 				`image/${mangaSlug}/${chapterNo}/0${currentChapterPictureOrder}.jpg`,
 				`image/${mangaSlug}/${chapterNo}/0${currentChapterPictureOrder}.png`
