@@ -129,7 +129,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 					selector: "#chapter-list > div.list-load > ul > li > a"
 				})
 
-				chapterListElements.map(chapterListElement => {
+				chapterListElements.forEach(chapterListElement => {
 					const chapterTitleElement = CrawlerService.getElementByClassName(chapterListElement, "cap-text")
 					const chapterDateElement = CrawlerService.getElementByClassName(chapterListElement, "chapter-date")
 
@@ -162,17 +162,15 @@ class MeusMangasImporterService implements MangaImporterContract {
 		const cdnUrl = "https://img.meusmangas.net"
 		const cdnHttpService = new HttpService({ baseURL: cdnUrl })
 
-		const possiblePictureExtensions = ["jpg", "png"]
-
 		while (!foundAllPictures) {
-			const picturePathLookups = await Promise.all(
-				possiblePictureExtensions.map(async pictureExtension => {
-					const picturePath = `image/${mangaSlug}/${chapterNo}/${currentChapterPictureOrder}.${pictureExtension}`
+			const possibleChapterPicturePaths = this.buildPossibleChapterPicturePaths(mangaSlug, chapterNo, currentChapterPictureOrder)
 
-					const pictureExists = await cdnHttpService.exists(picturePath)
+			const picturePathLookups = await Promise.all(
+				possibleChapterPicturePaths.map(async posibleChapterPicturePath => {
+					const pictureExists = await cdnHttpService.exists(posibleChapterPicturePath)
 
 					if (pictureExists) {
-						return picturePath
+						return posibleChapterPicturePath
 					}
 				})
 			)
@@ -192,6 +190,24 @@ class MeusMangasImporterService implements MangaImporterContract {
 		}
 
 		return rawChapterPictures
+	}
+
+	private buildPossibleChapterPicturePaths (mangaSlug: string, chapterNo: number, currentChapterPictureOrder: number): string[] {
+		const possibleChapterPicturePaths: string[] = [
+			`image/${mangaSlug}/${chapterNo}/${currentChapterPictureOrder}.jpg`,
+			`image/${mangaSlug}/${chapterNo}/${currentChapterPictureOrder}.png`
+		]
+
+		const isSmallChapterNo = String(currentChapterPictureOrder).length === 1
+
+		if (isSmallChapterNo) {
+			possibleChapterPicturePaths.push(
+				`image/${mangaSlug}/${chapterNo}/0${currentChapterPictureOrder}.jpg`,
+				`image/${mangaSlug}/${chapterNo}/0${currentChapterPictureOrder}.png`
+			)
+		}
+
+		return possibleChapterPicturePaths
 	}
 }
 
