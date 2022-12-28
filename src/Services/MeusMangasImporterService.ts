@@ -10,23 +10,19 @@ import { MeusMangasSearchResult, RawChapter, RawChapterPicture } from "@/Protoco
 
 import HttpService from "@/Services/HttpService"
 import CrawlerService from "@/Services/CrawlerService"
-import QueueService from "@/Services/QueueService"
 import CompressionService from "@/Services/CompressionService"
 import TempFolderService from "@/Services/TempFolderService"
 
-import MapUtil from "@/Utils/MapUtil"
 import FileUtil from "@/Utils/FileUtil"
 import SanitizationUtil from "@/Utils/SanitizationUtil"
 
 class MeusMangasImporterService implements MangaImporterContract {
 	private readonly httpService: HttpService
-	private readonly queueService = new QueueService({ concurrency: 7 })
-	private readonly websiteBaseURL = "https://meusmangas.net"
+	private readonly websiteBaseURL = "https://seemangas.com"
 
 	constructor () {
 		this.httpService = new HttpService({
-			baseURL: this.websiteBaseURL,
-			withProxy: true
+			baseURL: this.websiteBaseURL
 		})
 	}
 
@@ -109,46 +105,31 @@ class MeusMangasImporterService implements MangaImporterContract {
 	private async getRawChaptersByMangaPath (mangaPath: string): Promise<RawChapter[]> {
 		const html = await this.httpService.toString(mangaPath)
 
-		const [lastChaptersPageElement] = CrawlerService.findElements({
-			html,
-			selector: "#chapter-list > ul > li:nth-child(9)"
-		})
-
-		const lastChaptersPage = Number((lastChaptersPageElement?.children?.[0] as any)?.children?.[0]?.data)
-
 		const rawChapters: RawChapter[] = []
 
-		await MapUtil.iterate(lastChaptersPage, async (index) => (
-			await this.queueService.enqueue(async () => {
-				const page = index + 1
+		const chapterListElements = CrawlerService.findElements({
+			html,
+			selector: "#chapter-list > div.list-load > ul > li > a"
+		})
 
-				const html = await this.httpService.toString(`${mangaPath}/page/${page}`)
+		chapterListElements.forEach(chapterListElement => {
+			const chapterTitleElement = CrawlerService.getElementByClassName(chapterListElement, "cap-text")
+			const chapterDateElement = CrawlerService.getElementByClassName(chapterListElement, "chapter-date")
 
-				const chapterListElements = CrawlerService.findElements({
-					html,
-					selector: "#chapter-list > div.list-load > ul > li > a"
+			const chapterNumber = parseInt(chapterTitleElement.lastChild.data)
+			const chapterDate = chapterDateElement.lastChild.data
+
+			const chapterUrl = chapterListElement.attribs.href
+			const chapterPath = chapterUrl.replace(this.websiteBaseURL, "")
+
+			if (chapterNumber) {
+				rawChapters.push({
+					no: chapterNumber,
+					date: chapterDate,
+					path: chapterPath
 				})
-
-				chapterListElements.forEach(chapterListElement => {
-					const chapterTitleElement = CrawlerService.getElementByClassName(chapterListElement, "cap-text")
-					const chapterDateElement = CrawlerService.getElementByClassName(chapterListElement, "chapter-date")
-
-					const chapterNumber = parseInt(chapterTitleElement.lastChild.data)
-					const chapterDate = chapterDateElement.lastChild.data
-
-					const chapterUrl = chapterListElement.attribs.href
-					const chapterPath = chapterUrl.replace(this.websiteBaseURL, "")
-
-					if (chapterNumber) {
-						rawChapters.push({
-							no: chapterNumber,
-							date: chapterDate,
-							path: chapterPath
-						})
-					}
-				})
-			})
-		))
+			}
+		})
 
 		return rawChapters
 	}
