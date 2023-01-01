@@ -29,7 +29,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 	async getManga (name: string): Promise<Manga> {
 		const manga = await this.searchManga(name)
 
-		const mangaChapters = await this.searchMangaChapters(manga.path)
+		const mangaChapters = await this.searchMangaChapters(manga)
 
 		return {
 			title: manga.title,
@@ -52,10 +52,10 @@ class MeusMangasImporterService implements MangaImporterContract {
 		}
 	}
 
-	private async searchMangaChapters (mangaPath: string): Promise<MangaChapterSearchResult[]> {
-		const rawChapters = await this.getRawChaptersByMangaPath(mangaPath)
+	private async searchMangaChapters (manga: MangaSearchResult): Promise<MangaChapterSearchResult[]> {
+		const rawChapters = await this.getRawChaptersByMangaPath(manga.path)
 
-		const mangaSlug = mangaPath.split("/").pop()
+		const mangaSlug = this.turnMangaTitleIntoMangaSlug(manga.title)
 
 		const chapters: MangaChapterSearchResult[] = rawChapters.map(rawChapter => {
 			const title = `Chapter ${rawChapter.no}`
@@ -189,6 +189,10 @@ class MeusMangasImporterService implements MangaImporterContract {
 		}
 
 		return possibleChapterPicturePaths
+	}
+	
+	private turnMangaTitleIntoMangaSlug (mangaTitle: string): string {
+		return mangaTitle?.toLowerCase()?.replace(/ /g, "-")
 	}
 }
 
