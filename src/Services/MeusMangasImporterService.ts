@@ -140,7 +140,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 
 		const rawChapterPictures: RawChapterPicture[] = []
 
-		const cdnUrl = "https://img.meusmangas.net"
+		const cdnUrl = "https://img.seemangas.com"
 		const cdnHttpService = new HttpService({ baseURL: cdnUrl })
 
 		while (!foundAllPictures) {
