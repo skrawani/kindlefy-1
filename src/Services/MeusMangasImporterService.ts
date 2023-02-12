@@ -190,7 +190,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 
 		return possibleChapterPicturePaths
 	}
-	
+
 	private turnMangaTitleIntoMangaSlug (mangaTitle: string): string {
 		return mangaTitle?.toLowerCase()?.replace(/ /g, "-")
 	}

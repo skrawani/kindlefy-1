@@ -39,16 +39,16 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 					})
 
 					const epubFilePath = await this.EPUBConfigToEPUB(EPUBConfig)
-					const mobiFilePath = await this.EPUBToMOBI(epubFilePath, content.sourceConfig, coverPath)
 
-					const { filename } = FileUtil.parseFilePath(mobiFilePath)
+					const kindleFilePath = await this.convertToKindleFile(epubFilePath, content.sourceConfig, coverPath)
+					const kindleFileData = fs.createReadStream(kindleFilePath)
 
-					const mobiData = fs.createReadStream(mobiFilePath)
+					const { filename } = FileUtil.parseFilePath(kindleFilePath)
 
 					return new DocumentModel({
 						title: EPUBConfig.title,
 						filename,
-						data: mobiData,
+						data: kindleFileData,
 						type: content.sourceConfig.type
 					})
 				})
@@ -127,13 +127,11 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 		return epubFilePath
 	}
 
-	private async EPUBToMOBI (epubFilePath: string, sourceConfig: SourceConfig, customCoverUrl: string): Promise<string> {
-		const mobiFilePath = await this.ebookGeneratorService.generateMOBIFromEPUB(epubFilePath, {
+	private async convertToKindleFile (epubFilePath: string, sourceConfig: SourceConfig, customCoverUrl: string): Promise<string> {
+		return await this.ebookGeneratorService.convertEPUBToKindleFile(epubFilePath, {
 			noInlineToc: this.isSinglePostPerDocumentConfig(sourceConfig),
 			cover: customCoverUrl
 		})
-
-		return mobiFilePath
 	}
 
 	private isSinglePostPerDocumentConfig (sourceConfig: SourceConfig): boolean {

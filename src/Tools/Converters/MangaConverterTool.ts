@@ -38,16 +38,16 @@ class MangaConverterTool implements ConverterContract<Manga> {
 					const pagesFile = await mangaChapter.getPagesFile()
 
 					const cbzFilePath = await this.pagesFileToCBZ(pagesFile, fullChapterName)
-					const mobiFilePath = await this.CBZToMOBI(cbzFilePath, coverPath)
 
-					const mobiData = fs.createReadStream(mobiFilePath)
+					const kindleFilePath = await this.convertToKindleFile(cbzFilePath, coverPath)
+					const kindleFileData = fs.createReadStream(kindleFilePath)
 
-					const { filename } = FileUtil.parseFilePath(mobiFilePath)
+					const { filename } = FileUtil.parseFilePath(kindleFilePath)
 
 					return new DocumentModel({
 						title: fullChapterName,
 						filename,
-						data: mobiData,
+						data: kindleFileData,
 						type: content.sourceConfig.type
 					})
 				})
@@ -67,12 +67,10 @@ class MangaConverterTool implements ConverterContract<Manga> {
 		return cbzFilePath
 	}
 
-	private async CBZToMOBI (cbzFilePath: string, customCoverPath: string): Promise<string> {
-		const mobiFilePath = await this.ebookGeneratorService.generateMOBIFromCBZ(cbzFilePath, {
+	private async convertToKindleFile (cbzFilePath: string, customCoverPath: string): Promise<string> {
+		return await this.ebookGeneratorService.convertCBZToKindleFile(cbzFilePath, {
 			cover: customCoverPath
 		})
-
-		return mobiFilePath
 	}
 
 	private applySourceConfigDataManipulation (data: Manga["chapters"], sourceConfig: SourceConfig): Manga["chapters"] {

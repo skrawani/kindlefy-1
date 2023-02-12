@@ -20,32 +20,29 @@ class EbookGeneratorService {
 		return filePath
 	}
 
-	async generateMOBIFromEPUB (epubFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
-		const mobiFilePath = `${epubFilePath}.mobi`
-
-		await ProcessCommandService.run("ebook-convert", [epubFilePath, mobiFilePath], {
-			...(customOptions || {}),
-			...this.defaultEbookConvertOptions
-		})
-
-		return mobiFilePath
-	}
-
-	async generateMOBIFromCBZ (cbzFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
-		const mobiFilePath = `${cbzFilePath}.mobi`
-
-		const options: EbookConvertOptions = {
+	async convertCBZToKindleFile (cbzFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		return await this.convertToKindleFile(cbzFilePath, {
 			...(customOptions || {}),
 			noInlineToc: true,
 			outputProfile: "tablet",
 			right2left: false,
-			landscape: true,
+			landscape: true
+		})
+	}
+
+	async convertEPUBToKindleFile (epubFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		return await this.convertToKindleFile(epubFilePath, customOptions)
+	}
+
+	private async convertToKindleFile (filePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		const kindleEpubFilePath = `${filePath}.epub`
+
+		await ProcessCommandService.run("ebook-convert", [filePath, kindleEpubFilePath], {
+			...(customOptions || {}),
 			...this.defaultEbookConvertOptions
-		}
+		})
 
-		await ProcessCommandService.run("ebook-convert", [cbzFilePath, mobiFilePath], options)
-
-		return mobiFilePath
+		return kindleEpubFilePath
 	}
 }
 
