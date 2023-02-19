@@ -2,6 +2,6 @@ git clone https://github.com/gbkel/kindlefy.git
 
 cd kindlefy
 
-npm install
+npm install --force
 
 npm run exec
