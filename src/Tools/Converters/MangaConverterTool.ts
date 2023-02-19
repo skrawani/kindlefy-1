@@ -59,7 +59,6 @@ class MangaConverterTool implements ConverterContract<Manga> {
 
 	private async pagesFileToCBZ (pageFile: Buffer, title: string): Promise<string> {
 		const cbzFileName = SanitizationUtil.sanitizeFilename(`${title}.cbz`)
-
 		const cbzFilePath = await TempFolderService.mountTempPath(cbzFileName)
 
 		await fs.promises.writeFile(cbzFilePath, pageFile)
