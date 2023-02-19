@@ -35,11 +35,11 @@ class MangaConverterTool implements ConverterContract<Manga> {
 						subTitle: mangaChapter.title
 					})
 
-					const pagesFile = await mangaChapter.getPagesFile()
+					const chapterZipFile = await mangaChapter.getZipFile()
 
-					const cbzFilePath = await this.pagesFileToCBZ(pagesFile, fullChapterName)
+					const cbzFilePath = await this.pagesFileToCBZ(chapterZipFile.data, fullChapterName)
 
-					const kindleFilePath = await this.convertToKindleFile(cbzFilePath, coverPath)
+					const kindleFilePath = await this.convertToKindleFile(cbzFilePath, coverPath, fullChapterName)
 					const kindleFileData = fs.createReadStream(kindleFilePath)
 
 					const { filename } = FileUtil.parseFilePath(kindleFilePath)
@@ -67,9 +67,10 @@ class MangaConverterTool implements ConverterContract<Manga> {
 		return cbzFilePath
 	}
 
-	private async convertToKindleFile (cbzFilePath: string, customCoverPath: string): Promise<string> {
+	private async convertToKindleFile (cbzFilePath: string, customCoverPath: string, title: string): Promise<string> {
 		return await this.ebookGeneratorService.convertCBZToKindleFile(cbzFilePath, {
-			cover: customCoverPath
+			cover: customCoverPath,
+			title
 		})
 	}
 

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from "axios"
 import { Readable } from "stream"
 
-import { HttpOptions } from "@/Protocols/HttpProtocol"
+import { HttpOptions, RequestMethod } from "@/Protocols/HttpProtocol"
 
 import HttpProxyService from "@/Services/HttpProxyService"
 
@@ -16,6 +16,7 @@ class HttpService {
 			baseURL: options.baseURL,
 			withCredentials: true,
 			headers: {
+				...options?.headers,
 				"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"
 			}
 		})
@@ -75,6 +76,17 @@ class HttpService {
 		} catch {
 			return false
 		}
+	}
+
+	async makeRawRequest<Result>(method: RequestMethod, url: string, data: unknown = undefined, options?: HttpOptions): Promise<Result> {
+		const response = await this.client({
+			method,
+			url,
+			...options,
+			data
+		})
+
+		return response.data
 	}
 
 	private async withProxy (url: string): Promise<string> {

@@ -1,3 +1,5 @@
+export type RequestMethod = "POST" | "DELETE" | "GET"
+
 export type HttpOptions = {
 	baseURL?: string
 	/**
@@ -6,4 +8,5 @@ export type HttpOptions = {
 	 * the website.
 	 */
 	withProxy?: boolean
+	headers?: Record<string, string>
 }

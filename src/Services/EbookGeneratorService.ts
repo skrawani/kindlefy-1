@@ -7,6 +7,8 @@ import {
 
 import ProcessCommandService from "@/Services/ProcessCommandService"
 
+import FileUtil from "@/Utils/FileUtil"
+
 class EbookGeneratorService {
 	private readonly defaultEbookConvertOptions: EbookConvertOptions = {
 		authors: "Kindlefy"
@@ -35,12 +37,14 @@ class EbookGeneratorService {
 	}
 
 	private async convertToKindleFile (filePath: string, customOptions?: EbookConvertOptions): Promise<string> {
-		const kindleEpubFilePath = `${filePath}.epub`
+		const { name, basePath } = FileUtil.parseFilePath(filePath)
+		const filePathWithoutExtension = `${basePath}${name}`
 
-		await ProcessCommandService.run("ebook-convert", [filePath, kindleEpubFilePath], {
-			...(customOptions || {}),
-			...this.defaultEbookConvertOptions
-		})
+		const kindleMobiFilePath = `${filePathWithoutExtension}.mobi`
+		await ProcessCommandService.run("ebook-convert", [filePath, kindleMobiFilePath], { ...customOptions, ...this.defaultEbookConvertOptions })
+
+		const kindleEpubFilePath = `${filePathWithoutExtension}.epub`
+		await ProcessCommandService.run("ebook-convert", [kindleMobiFilePath, kindleEpubFilePath], this.defaultEbookConvertOptions)
 
 		return kindleEpubFilePath
 	}

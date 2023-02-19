@@ -4,7 +4,7 @@ import { DocumentModel } from "@/Models/DocumentModel"
 
 import { ConverterContract } from "@/Protocols/ConverterProtocol"
 import { Content } from "@/Protocols/ImporterProtocol"
-import { GenerateEPUBOptions, EpubContent } from "@/Protocols/EbookGeneratorProtocol"
+import { GenerateEPUBOptions, EpubContent, GenerateEPUBConfig } from "@/Protocols/EbookGeneratorProtocol"
 import { SourceConfig } from "@/Protocols/SetupInputProtocol"
 import { ParsedRSS } from "@/Protocols/ParserProtocol"
 
@@ -27,26 +27,26 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 	private readonly ebookCoverService = new EbookCoverService()
 
 	async convert (content: Content<Buffer>): Promise<DocumentModel[]> {
-		const EPUBConfigs = await this.RSSToEPUBConfig(content.data, content.sourceConfig)
+		const EPUBConfig = await this.RSSToEPUBConfig(content.data, content.sourceConfig)
 
 		const documents: DocumentModel[] = await Promise.all(
-			EPUBConfigs.map(async EPUBConfig => (
+			EPUBConfig.options.map(async EPUBOption => (
 				await this.queueService.enqueue(async () => {
 					const coverPath = await this.ebookCoverService.generate({
-						rawCoverUrl: EPUBConfig.cover,
-						title: EPUBConfig.metadata.title,
-						subTitle: EPUBConfig.metadata.subTitle
+						rawCoverUrl: EPUBOption.cover,
+						title: EPUBOption.metadata.title,
+						subTitle: EPUBOption.metadata.subTitle
 					})
 
-					const epubFilePath = await this.EPUBConfigToEPUB(EPUBConfig)
+					const epubFilePath = await this.EPUBOptionToEPUB(EPUBOption)
 
-					const kindleFilePath = await this.convertToKindleFile(epubFilePath, content.sourceConfig, coverPath)
+					const kindleFilePath = await this.convertToKindleFile(epubFilePath, content.sourceConfig, coverPath, EPUBOption.title)
 					const kindleFileData = fs.createReadStream(kindleFilePath)
 
 					const { filename } = FileUtil.parseFilePath(kindleFilePath)
 
 					return new DocumentModel({
-						title: EPUBConfig.title,
+						title: EPUBOption.title,
 						filename,
 						data: kindleFileData,
 						type: content.sourceConfig.type
@@ -58,7 +58,7 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 		return documents
 	}
 
-	private async RSSToEPUBConfig (rssBuffer: Buffer, sourceConfig: SourceConfig): Promise<GenerateEPUBOptions[]> {
+	private async RSSToEPUBConfig (rssBuffer: Buffer, sourceConfig: SourceConfig): Promise<GenerateEPUBConfig> {
 		const rssString = rssBuffer.toString()
 
 		const parsedRSS = await this.parserService.parseRSS(rssString)
@@ -79,12 +79,12 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 			})
 		)
 
-		let EPUBConfigs: GenerateEPUBOptions[] = []
+		let options: GenerateEPUBOptions[] = []
 
 		const metadataTitle = parsedRSS.title
 
 		if (this.isSinglePostPerDocumentConfig(sourceConfig)) {
-			EPUBConfigs = content.map(item => {
+			options = content.map(item => {
 				const metadataSubTitle = item.title
 
 				return {
@@ -102,7 +102,7 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 		} else {
 			const metadataSubTitle = DateUtil.todayFormattedDate
 
-			EPUBConfigs = [{
+			options = [{
 				title: `${metadataTitle} ${metadataSubTitle}`,
 				author: parsedRSS.author,
 				publisher: parsedRSS.creator,
@@ -115,10 +115,12 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 			}]
 		}
 
-		return EPUBConfigs
+		return {
+			options
+		}
 	}
 
-	private async EPUBConfigToEPUB (EPUBConfig: GenerateEPUBOptions): Promise<string> {
+	private async EPUBOptionToEPUB (EPUBConfig: GenerateEPUBOptions): Promise<string> {
 		const epubFileName = SanitizationUtil.sanitizeFilename(`${EPUBConfig.title}.epub`)
 		const epubFilePath = await TempFolderService.mountTempPath(epubFileName)
 
@@ -127,10 +129,11 @@ class RSSConverterTool implements ConverterContract<Buffer> {
 		return epubFilePath
 	}
 
-	private async convertToKindleFile (epubFilePath: string, sourceConfig: SourceConfig, customCoverUrl: string): Promise<string> {
+	private async convertToKindleFile (epubFilePath: string, sourceConfig: SourceConfig, customCoverPath: string, title: string): Promise<string> {
 		return await this.ebookGeneratorService.convertEPUBToKindleFile(epubFilePath, {
 			noInlineToc: this.isSinglePostPerDocumentConfig(sourceConfig),
-			cover: customCoverUrl
+			cover: customCoverPath,
+			title
 		})
 	}
 
