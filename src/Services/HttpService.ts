@@ -80,9 +80,9 @@ class HttpService {
 
 	async makeRawRequest<Result>(method: RequestMethod, url: string, data: unknown = undefined, options?: HttpOptions): Promise<Result> {
 		const response = await this.client({
+			...options,
 			method,
 			url,
-			...options,
 			data
 		})
 
