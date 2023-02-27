@@ -12,11 +12,11 @@ class SMTPSenderTool implements SenderContract {
 
 	constructor (config: SMTPConfig, customTransportOptions?: CustomTransportOptions) {
 		const transportConfig = {
-			port: config.port,
-			host: config.host,
+			port: config?.port,
+			host: config?.host,
 			auth: {
-				user: config.user,
-				pass: config.password
+				user: config?.user,
+				pass: config?.password
 			},
 			...(customTransportOptions || {})
 		}

@@ -24,13 +24,14 @@ class MeusMangasImporterService implements MangaImporterContract {
 		MANGA_SEARCH_NONCE: "e154db27c2",
 		MANGA_CHAPTERS_SECURITY: ""
 	}
+	private readonly websiteHeaders = {
+		Referer: this.websiteBaseURL
+	}
 
 	constructor () {
 		this.httpService = new HttpService({
 			baseURL: this.websiteBaseURL,
-			headers: {
-				Referer: this.websiteBaseURL
-			}
+			headers: this.websiteHeaders
 		})
 	}
 
@@ -84,7 +85,9 @@ class MeusMangasImporterService implements MangaImporterContract {
 
 					compressionService.pipe(zipFileStream)
 
-					const httpService = new HttpService({})
+					const httpService = new HttpService({
+						headers: this.websiteHeaders
+					})
 
 					await Promise.all(
 						rawChapterPictures.map(async rawChapterPicture => {
