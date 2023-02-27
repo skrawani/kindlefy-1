@@ -22,7 +22,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 	private readonly websiteBaseURL = "https://seemangas.com"
 	private readonly requestAuthTokens = {
 		MANGA_SEARCH_NONCE: "e154db27c2",
-		MANGA_CHAPTERS_SECURITY: ""
+		MANGA_CHAPTERS_SECURITY: "x2a6sx28sa"
 	}
 	private readonly websiteHeaders = {
 		Referer: this.websiteBaseURL
