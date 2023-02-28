@@ -7,7 +7,7 @@ class ParseUtil {
 		try {
 			return JSON.parse(value)
 		} catch (error) {
-			ErrorHandlerService.handle(new ArrayParsingException(value))
+			ErrorHandlerService.handle(new ArrayParsingException(value, error))
 			return []
 		}
 	}
