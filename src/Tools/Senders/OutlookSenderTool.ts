@@ -7,7 +7,7 @@ import SMTPSenderTool from "@/Tools/Senders/SMTPSenderTool"
 class OutlookSenderTool implements SenderContract {
 	private readonly smtpSenderTool: SMTPSenderTool
 
-	constructor(email: string, password: string) {
+	constructor (email: string, password: string) {
 		this.smtpSenderTool = new SMTPSenderTool({
 			host: "smtp-mail.outlook.com",
 			email,
@@ -21,7 +21,7 @@ class OutlookSenderTool implements SenderContract {
 		})
 	}
 
-	async sendToKindle(document: DocumentModel, kindleConfig: KindleConfig): Promise<void> {
+	async sendToKindle (document: DocumentModel, kindleConfig: KindleConfig): Promise<void> {
 		return await this.smtpSenderTool.sendToKindle(document, kindleConfig)
 	}
 }

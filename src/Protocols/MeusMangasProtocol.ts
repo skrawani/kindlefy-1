@@ -5,6 +5,14 @@ export type MeusMangasSearchResult = {
 	img: string
 }
 
+export type MeusMangasChapterImageListResult = {
+	total: number
+	images: Array<{
+		url: string
+		name: string
+	}>
+}
+
 export type RawChapterPicture = {
 	url: string
 	order: number

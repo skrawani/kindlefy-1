@@ -9,13 +9,13 @@ class GmailSenderTool implements SenderContract {
 
 	constructor (email: string, password: string) {
 		this.smtpSenderTool = new SMTPSenderTool({
-			host: "smtp.gmail.com",
+			host: "gmail-smtp-msa.l.google.com",
 			email,
 			password,
 			user: email,
-			port: 587
+			port: 465
 		}, {
-			secure: false,
+			secure: true,
 			tls: {
 				ciphers: "SSLv3",
 				rejectUnauthorized: false

@@ -16,6 +16,10 @@ export type GenerateEPUBOptions = {
 	}
 }
 
+export type GenerateEPUBConfig = {
+	options: GenerateEPUBOptions[]
+}
+
 /**
  * More options can be found here:
  * - http://manpages.ubuntu.com/manpages/bionic/man1/ebook-convert.1.html
@@ -48,4 +52,5 @@ export type EbookConvertOptions = {
 	 * Indicates a custom cover for ebook by some path or link.
 	 */
 	cover?: string
+	title?: string
 }

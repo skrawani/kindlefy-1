@@ -1,4 +1,5 @@
 import fs from "fs"
+import FormData from "form-data"
 
 import {
 	MangaSearchResult,
@@ -6,34 +7,38 @@ import {
 	Manga,
 	MangaImporterContract
 } from "@/Protocols/MangaImporterProtocol"
-import { MeusMangasSearchResult, RawChapter, RawChapterPicture } from "@/Protocols/MeusMangasProtocol"
+import { MeusMangasChapterImageListResult, MeusMangasSearchResult, RawChapter, RawChapterPicture } from "@/Protocols/MeusMangasProtocol"
 
 import HttpService from "@/Services/HttpService"
 import CrawlerService from "@/Services/CrawlerService"
-import QueueService from "@/Services/QueueService"
 import CompressionService from "@/Services/CompressionService"
 import TempFolderService from "@/Services/TempFolderService"
 
-import MapUtil from "@/Utils/MapUtil"
 import FileUtil from "@/Utils/FileUtil"
 import SanitizationUtil from "@/Utils/SanitizationUtil"
 
 class MeusMangasImporterService implements MangaImporterContract {
 	private readonly httpService: HttpService
-	private readonly queueService = new QueueService({ concurrency: 7 })
-	private readonly websiteBaseURL = "https://meusmangas.net"
+	private readonly websiteBaseURL = "https://seemangas.com"
+	private readonly requestAuthTokens = {
+		MANGA_SEARCH_NONCE: "e154db27c2",
+		MANGA_CHAPTERS_SECURITY: "x2a6sx28sa"
+	}
+	private readonly websiteHeaders = {
+		Referer: this.websiteBaseURL
+	}
 
 	constructor () {
 		this.httpService = new HttpService({
 			baseURL: this.websiteBaseURL,
-			withProxy: true
+			headers: this.websiteHeaders
 		})
 	}
 
 	async getManga (name: string): Promise<Manga> {
 		const manga = await this.searchManga(name)
 
-		const mangaChapters = await this.searchMangaChapters(manga.path)
+		const mangaChapters = await this.searchMangaChapters(manga)
 
 		return {
 			title: manga.title,
@@ -43,7 +48,7 @@ class MeusMangasImporterService implements MangaImporterContract {
 	}
 
 	private async searchManga (name: string): Promise<MangaSearchResult> {
-		const json = await this.httpService.toJSON<Record<string, MeusMangasSearchResult>>(`wp-json/site/search/?keyword=${name}&nonce=e154db27c2`)
+		const json = await this.httpService.toJSON<Record<string, MeusMangasSearchResult>>(`wp-json/site/search/?keyword=${name}&nonce=${this.requestAuthTokens.MANGA_SEARCH_NONCE}`)
 
 		const [manga] = Object.values(json)
 
@@ -56,10 +61,8 @@ class MeusMangasImporterService implements MangaImporterContract {
 		}
 	}
 
-	private async searchMangaChapters (mangaPath: string): Promise<MangaChapterSearchResult[]> {
-		const rawChapters = await this.getRawChaptersByMangaPath(mangaPath)
-
-		const mangaSlug = mangaPath.split("/").pop()
+	private async searchMangaChapters (manga: MangaSearchResult): Promise<MangaChapterSearchResult[]> {
+		const rawChapters = await this.getRawChaptersByMangaPath(manga.path)
 
 		const chapters: MangaChapterSearchResult[] = rawChapters.map(rawChapter => {
 			const title = `Chapter ${rawChapter.no}`
@@ -70,19 +73,21 @@ class MeusMangasImporterService implements MangaImporterContract {
 				createdAt,
 				no,
 				title,
-				getPagesFile: async () => {
-					const rawChapterPictures = await this.getRawChapterPictures(mangaSlug, no)
+				getZipFile: async () => {
+					const rawChapterPictures = await this.getRawChapterPictures(rawChapter.path)
 
 					const compressionService = new CompressionService()
 
-					const pagesFileName = SanitizationUtil.sanitizeFilename(`${mangaSlug}-${no}.zip`)
-					const pagesFilePath = await TempFolderService.mountTempPath(pagesFileName)
+					const zipFileName = SanitizationUtil.sanitizeFilename(`${manga.title}-${no}.zip`)
+					const zipFilePath = await TempFolderService.mountTempPath(zipFileName)
 
-					const pagesFileStream = fs.createWriteStream(pagesFilePath)
+					const zipFileStream = fs.createWriteStream(zipFilePath)
 
-					compressionService.pipe(pagesFileStream)
+					compressionService.pipe(zipFileStream)
 
-					const httpService = new HttpService({})
+					const httpService = new HttpService({
+						headers: this.websiteHeaders
+					})
 
 					await Promise.all(
 						rawChapterPictures.map(async rawChapterPicture => {
@@ -96,9 +101,12 @@ class MeusMangasImporterService implements MangaImporterContract {
 
 					await compressionService.compress()
 
-					const pagesFile = await fs.promises.readFile(pagesFilePath)
+					const zipFile = await fs.promises.readFile(zipFilePath)
 
-					return pagesFile
+					return {
+						data: zipFile,
+						path: zipFilePath
+					}
 				}
 			}
 		})
@@ -109,87 +117,55 @@ class MeusMangasImporterService implements MangaImporterContract {
 	private async getRawChaptersByMangaPath (mangaPath: string): Promise<RawChapter[]> {
 		const html = await this.httpService.toString(mangaPath)
 
-		const [lastChaptersPageElement] = CrawlerService.findElements({
-			html,
-			selector: "#chapter-list > ul > li:nth-child(9)"
-		})
-
-		const lastChaptersPage = Number((lastChaptersPageElement?.children?.[0] as any)?.children?.[0]?.data)
-
 		const rawChapters: RawChapter[] = []
 
-		await MapUtil.iterate(lastChaptersPage, async (index) => (
-			await this.queueService.enqueue(async () => {
-				const page = index + 1
+		const chapterListElements = CrawlerService.findElements({
+			html,
+			selector: "#chapter-list > div.list-load > ul > li > a"
+		})
 
-				const html = await this.httpService.toString(`${mangaPath}/page/${page}`)
+		chapterListElements.forEach(chapterListElement => {
+			const chapterTitleElement = CrawlerService.getElementByClassName(chapterListElement, "cap-text")
+			const chapterDateElement = CrawlerService.getElementByClassName(chapterListElement, "chapter-date")
 
-				const chapterListElements = CrawlerService.findElements({
-					html,
-					selector: "#chapter-list > div.list-load > ul > li > a"
+			const chapterNumber = parseInt(chapterTitleElement.lastChild.data)
+			const chapterDate = chapterDateElement.lastChild.data
+
+			const chapterUrl = chapterListElement.attribs.href
+			const chapterPath = chapterUrl.replace(this.websiteBaseURL, "")
+
+			if (chapterNumber) {
+				rawChapters.push({
+					no: chapterNumber,
+					date: chapterDate,
+					path: chapterPath
 				})
-
-				chapterListElements.map(chapterListElement => {
-					const chapterTitleElement = CrawlerService.getElementByClassName(chapterListElement, "cap-text")
-					const chapterDateElement = CrawlerService.getElementByClassName(chapterListElement, "chapter-date")
-
-					const chapterNumber = parseInt(chapterTitleElement.lastChild.data)
-					const chapterDate = chapterDateElement.lastChild.data
-
-					const chapterUrl = chapterListElement.attribs.href
-					const chapterPath = chapterUrl.replace(this.websiteBaseURL, "")
-
-					if (chapterNumber) {
-						rawChapters.push({
-							no: chapterNumber,
-							date: chapterDate,
-							path: chapterPath
-						})
-					}
-				})
-			})
-		))
+			}
+		})
 
 		return rawChapters
 	}
 
-	private async getRawChapterPictures (mangaSlug: string, chapterNo: number): Promise<RawChapterPicture[]> {
-		let foundAllPictures = false
-		let currentChapterPictureOrder = 1
+	private async getRawChapterPictures (chapterPath: string): Promise<RawChapterPicture[]> {
+		const postRawId = chapterPath.split("-")?.pop()
+		const postId = postRawId?.replace(/\D/g, "")
 
-		const rawChapterPictures: RawChapterPicture[] = []
+		const formData = new FormData()
 
-		const cdnUrl = "https://img.meusmangas.net"
-		const cdnHttpService = new HttpService({ baseURL: cdnUrl })
+		formData.append("action", "get_image_list")
+		formData.append("id_serie", postId)
+		formData.append("security", this.requestAuthTokens.MANGA_CHAPTERS_SECURITY)
 
-		const possiblePictureExtensions = ["jpg", "png"]
-
-		while (!foundAllPictures) {
-			const picturePathLookups = await Promise.all(
-				possiblePictureExtensions.map(async pictureExtension => {
-					const picturePath = `image/${mangaSlug}/${chapterNo}/${currentChapterPictureOrder}.${pictureExtension}`
-
-					const pictureExists = await cdnHttpService.exists(picturePath)
-
-					if (pictureExists) {
-						return picturePath
-					}
-				})
-			)
-
-			const validPicturePath = picturePathLookups.find(path => path)
-
-			if (validPicturePath) {
-				rawChapterPictures.push({
-					url: `${cdnUrl}/${validPicturePath}`,
-					order: currentChapterPictureOrder
-				})
-
-				currentChapterPictureOrder++
-			} else {
-				foundAllPictures = true
+		const chapterImageList = await this.httpService.makeRawRequest<MeusMangasChapterImageListResult>("POST", "/wp-admin/admin-ajax.php", formData, {
+			headers: {
+				"Content-Type": `multipart/form-data; boundary=${formData.getBoundary()}`
 			}
-		}
+		})
+
+		const rawChapterPictures: RawChapterPicture[] = chapterImageList.images.map((image, index) => ({
+			url: image.url,
+			order: index + 1
+		}))
 
 		return rawChapterPictures
 	}

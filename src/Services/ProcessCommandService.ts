@@ -1,4 +1,5 @@
 import { exec, ExecOptions } from "child_process"
+import { ProcessCommandException } from "@/Exceptions/ProcessCommandException"
 
 class ProcessCommandService {
 	private readonly execOptions: ExecOptions = {
@@ -28,8 +29,9 @@ class ProcessCommandService {
 			}
 
 			exec(command, mergedOptions, (error, stdout, stderr) => {
+				// console.log("\n\n\n ERROR:: ", error, "\n\n\nSTDOUT::", stdout, "STDERR:: ", stderr, "\n\n\n")
 				if (error) {
-					reject(error)
+					reject(new ProcessCommandException(error, stdout, stderr))
 				} else if (stderr) {
 					reject(stderr)
 				} else {

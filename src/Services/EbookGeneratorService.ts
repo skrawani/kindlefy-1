@@ -7,6 +7,8 @@ import {
 
 import ProcessCommandService from "@/Services/ProcessCommandService"
 
+import FileUtil from "@/Utils/FileUtil"
+
 class EbookGeneratorService {
 	private readonly defaultEbookConvertOptions: EbookConvertOptions = {
 		authors: "Kindlefy"
@@ -20,32 +22,31 @@ class EbookGeneratorService {
 		return filePath
 	}
 
-	async generateMOBIFromEPUB (epubFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
-		const mobiFilePath = `${epubFilePath}.mobi`
-
-		await ProcessCommandService.run("ebook-convert", [epubFilePath, mobiFilePath], {
-			...(customOptions || {}),
-			...this.defaultEbookConvertOptions
-		})
-
-		return mobiFilePath
-	}
-
-	async generateMOBIFromCBZ (cbzFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
-		const mobiFilePath = `${cbzFilePath}.mobi`
-
-		const options: EbookConvertOptions = {
+	async convertCBZToKindleFile (cbzFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		return await this.convertToKindleFile(cbzFilePath, {
 			...(customOptions || {}),
 			noInlineToc: true,
 			outputProfile: "tablet",
 			right2left: false,
-			landscape: true,
-			...this.defaultEbookConvertOptions
-		}
+			landscape: true
+		})
+	}
 
-		await ProcessCommandService.run("ebook-convert", [cbzFilePath, mobiFilePath], options)
+	async convertEPUBToKindleFile (epubFilePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		return await this.convertToKindleFile(epubFilePath, customOptions)
+	}
 
-		return mobiFilePath
+	private async convertToKindleFile (filePath: string, customOptions?: EbookConvertOptions): Promise<string> {
+		const { name, basePath } = FileUtil.parseFilePath(filePath)
+		const filePathWithoutExtension = `${basePath}${name}`
+
+		const kindleMobiFilePath = `${filePathWithoutExtension}.mobi`
+		await ProcessCommandService.run("ebook-convert", [filePath, kindleMobiFilePath], { ...customOptions, ...this.defaultEbookConvertOptions })
+
+		const kindleEpubFilePath = `${filePathWithoutExtension}.epub`
+		await ProcessCommandService.run("ebook-convert", [kindleMobiFilePath, kindleEpubFilePath], this.defaultEbookConvertOptions)
+
+		return kindleEpubFilePath
 	}
 }
 

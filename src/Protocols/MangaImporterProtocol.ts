@@ -8,7 +8,7 @@ export type MangaChapterSearchResult = {
 	no: number
 	title: string
 	createdAt: string
-	getPagesFile: () => Promise<Buffer>
+	getZipFile: () => Promise<{ data: Buffer, path: string }>
 }
 
 export type Manga = {

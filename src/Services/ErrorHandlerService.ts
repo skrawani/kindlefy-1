@@ -1,6 +1,6 @@
 class ErrorHandlerService {
 	handle (error: Error): void {
-		console.log(error)
+		console.error(error)
 	}
 }
 

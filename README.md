@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Kindlefy
-        uses: gbkel/kindlefy@v1.4.1
+        uses: gbkel/kindlefy@v1.4.3
         with:
           kindle_email: 'test@kindle.com'
           sender: '[{ "type": "gmail", "email": "test@gmail.com", "password": "password" }]'
@@ -63,10 +63,10 @@ We recommend you to create a new email to use as a sender since some services ne
 
 **Gmail**
 
-In order to use Gmail, you need to [Disable Unlock Captcha](https://accounts.google.com/DisplayUnlockCaptcha), Disable Two Factor Auth, [Enable Less Secure Apps Access](https://myaccount.google.com/lesssecureapps).
+In order to use Gmail, you need to [Enable 2FA](https://myaccount.google.com/signinoptions/two-step-verification/enroll-welcome), [Create an App-Specific Password](https://myaccount.google.com/apppasswords).
 
 - ```email``` *- String -* The email you use to login in gmail.
-- ```password``` *- String -* The password you use to login in gmail.
+- ```password``` *- String -* The app-specific password you created for email.
 
 Example:
 

@@ -12,6 +12,12 @@ inputs:
   sources:
     description: "The sources to retrieve the content to Kindle."
     required: true
+  storage:
+    description: "The storage used to persist info about synced data."
+    required: false
+  no_duplicated_sync:
+    description: "Uses an existing storage in order to keep track of synced data in order to avoid duplicated sync."
+    required: false
 
 runs:
   using: 'docker'

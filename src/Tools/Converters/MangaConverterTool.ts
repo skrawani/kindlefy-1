@@ -35,19 +35,19 @@ class MangaConverterTool implements ConverterContract<Manga> {
 						subTitle: mangaChapter.title
 					})
 
-					const pagesFile = await mangaChapter.getPagesFile()
+					const chapterZipFile = await mangaChapter.getZipFile()
 
-					const cbzFilePath = await this.pagesFileToCBZ(pagesFile, fullChapterName)
-					const mobiFilePath = await this.CBZToMOBI(cbzFilePath, coverPath)
+					const cbzFilePath = await this.pagesFileToCBZ(chapterZipFile.data, fullChapterName)
 
-					const mobiData = fs.createReadStream(mobiFilePath)
+					const kindleFilePath = await this.convertToKindleFile(cbzFilePath, coverPath, fullChapterName)
+					const kindleFileData = fs.createReadStream(kindleFilePath)
 
-					const { filename } = FileUtil.parseFilePath(mobiFilePath)
+					const { filename } = FileUtil.parseFilePath(kindleFilePath)
 
 					return new DocumentModel({
 						title: fullChapterName,
 						filename,
-						data: mobiData,
+						data: kindleFileData,
 						type: content.sourceConfig.type
 					})
 				})
@@ -59,7 +59,6 @@ class MangaConverterTool implements ConverterContract<Manga> {
 
 	private async pagesFileToCBZ (pageFile: Buffer, title: string): Promise<string> {
 		const cbzFileName = SanitizationUtil.sanitizeFilename(`${title}.cbz`)
-
 		const cbzFilePath = await TempFolderService.mountTempPath(cbzFileName)
 
 		await fs.promises.writeFile(cbzFilePath, pageFile)
@@ -67,12 +66,11 @@ class MangaConverterTool implements ConverterContract<Manga> {
 		return cbzFilePath
 	}
 
-	private async CBZToMOBI (cbzFilePath: string, customCoverPath: string): Promise<string> {
-		const mobiFilePath = await this.ebookGeneratorService.generateMOBIFromCBZ(cbzFilePath, {
-			cover: customCoverPath
+	private async convertToKindleFile (cbzFilePath: string, customCoverPath: string, title: string): Promise<string> {
+		return await this.ebookGeneratorService.convertCBZToKindleFile(cbzFilePath, {
+			cover: customCoverPath,
+			title
 		})
-
-		return mobiFilePath
 	}
 
 	private applySourceConfigDataManipulation (data: Manga["chapters"], sourceConfig: SourceConfig): Manga["chapters"] {
